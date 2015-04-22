@@ -26,10 +26,17 @@ class Rom
   end
 
   def has_trainer?
-    flags6 & (0x1 << 2)
+    (flags6 & (0x1 << 2)) == 1
   end
 
   def flags6
     @data[6]
+  end
+
+  def readPRG(address)
+    @data[
+      HEADER_SIZE +
+      (has_trainer? ? TRAINER_SIZE : 0) +
+      (address % (PRG_ROM_SIZE * @prg_banks))]
   end
 end
