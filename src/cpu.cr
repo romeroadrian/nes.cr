@@ -63,6 +63,10 @@ class Cpu
       ldaAbsolute
     when 0x10
       bpl
+    when 0xA5
+      ldaZero
+    when 0x4A
+      lsrA
     else
       raise "Missing instruction: 0x#{instruction.to_s(16)}"
     end
@@ -84,9 +88,7 @@ class Cpu
   private def ldxImmediate
     @x = read(@pc)
     @pc += 1
-    # Z and N
-    @z = @x & 0x1
-    @n = (@x >> 7) & 0x1
+    setZN(@x)
   end
 
   private def txs
@@ -96,8 +98,7 @@ class Cpu
   private def ldaAbsolute
     @a = read(read2(@pc))
     @pc += 2
-    @z = @a & 0x1
-    @n = (@a >> 7) & 0x1
+    setZN(@a)
   end
 
   private def bpl
@@ -106,6 +107,23 @@ class Cpu
     if @n == 0
       @pc += offset - 0x80 # relative treats offsets as signed bytes
     end
+  end
+
+  private def ldaZero
+    @a = read(read(@pc))
+    @pc += 1
+    setZN(@a)
+  end
+
+  private def lsrA
+    @c = @a & 0x1
+    @a >> 1
+    setZN(@a)
+  end
+
+  private def setZN(value)
+    @z = value # TODO is this ok?
+    @n = (value >> 7) & 0x1
   end
 
   # stack is at  $0100 and $01FF
