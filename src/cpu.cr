@@ -1,7 +1,7 @@
 require "./cpu_ram"
 
 class Cpu
-  def initialize(@rom)
+  def initialize(@memory)
     # CPU Registers
     @a = 0_u8     # accumulator 8bits
     @x = 0_u8     # x index 8bits
@@ -18,33 +18,7 @@ class Cpu
     @v = 0_u8 # V overflow flag
     @n = 0_u8 # N negative flag (0 = positive, 1 = negative)
 
-    @ram = CpuRam.new
-
     init
-  end
-
-  def read(address)
-    case
-    when address < 0x2000
-      @ram.peek(address)
-    when address >= 0x8000
-      @rom.readPRG(address - 0x8000)
-    else
-      0
-    end
-  end
-
-  def read2(address)
-    a = read(address).to_u16
-    b = read(address + 1).to_u16
-    (b << 8) | a
-  end
-
-  def write(address, value)
-    case
-    when address < 0x2000
-      @ram.poke(address, value)
-    end
   end
 
   def step
@@ -76,6 +50,16 @@ class Cpu
     # 6502 begins execution at u16 in 0xFFFC
     @pc = read2(0xFFFC)
   end
+
+  private def read(address)
+    @memory.read address
+  end
+
+  private def read2(address)
+    @memory.read2 address
+  end
+
+  # INSTRUCTIONS
 
   private def sei
     @i = 1_u8
@@ -120,6 +104,8 @@ class Cpu
     @a >> 1
     setZN(@a)
   end
+
+  # FLAGS
 
   private def setZN(value)
     @z = value # TODO is this ok?
