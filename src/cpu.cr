@@ -1,6 +1,21 @@
 require "./cpu_ram"
 
 class Cpu
+
+  @a :: UInt8
+  @x :: UInt8
+  @y :: UInt8
+  @sp :: UInt8
+  @pc :: UInt16
+
+  @c :: UInt8
+  @z :: UInt8
+  @i :: UInt8
+  @d :: UInt8
+  @b :: UInt8
+  @v :: UInt8
+  @n :: UInt8
+
   def initialize(@memory)
     # CPU Registers
     @a = 0_u8     # accumulator 8bits
@@ -41,6 +56,14 @@ class Cpu
       ldaZero
     when 0x4A
       lsrA
+    when 0xB0
+      bcs
+    when 0x4C
+      jmpAbsolute
+    when 0x20
+      jsrAbsolute
+    when 0xC5
+      cmp_zero
     else
       raise "Missing instruction: 0x#{instruction.to_s(16)}"
     end
@@ -49,6 +72,8 @@ class Cpu
   private def init
     # 6502 begins execution at u16 in 0xFFFC
     @pc = read2(0xFFFC)
+    # SP starts at 0xFD
+    @sp = 0xFD_u8
   end
 
   private def read(address)
@@ -57,6 +82,10 @@ class Cpu
 
   private def read2(address)
     @memory.read2 address
+  end
+
+  private def write(address, value)
+    @memory.write address, value
   end
 
   # INSTRUCTIONS
@@ -72,7 +101,7 @@ class Cpu
   private def ldxImmediate
     @x = read(@pc)
     @pc += 1
-    setZN(@x)
+    set_ZN(@x)
   end
 
   private def txs
@@ -82,7 +111,7 @@ class Cpu
   private def ldaAbsolute
     @a = read(read2(@pc))
     @pc += 2
-    setZN(@a)
+    set_ZN(@a)
   end
 
   private def bpl
@@ -96,24 +125,69 @@ class Cpu
   private def ldaZero
     @a = read(read(@pc))
     @pc += 1
-    setZN(@a)
+    set_ZN(@a)
   end
 
   private def lsrA
     @c = @a & 0x1
     @a >> 1
-    setZN(@a)
+    set_ZN(@a)
+  end
+
+  private def bcs
+    offset = read(@pc)
+    @pc += 1
+    if @c > 0
+      @pc += offset - 0x80 # relative
+    end
+  end
+
+  private def jmpAbsolute
+    @pc = read2(@pc)
+  end
+
+  private def jsrAbsolute
+    push_stack_2(@pc - 1)
+    @pc = read2(@pc)
+  end
+
+  private def cmp_zero
+    r = @a - read(read(@pc))
+    @c = r >= 0 ? 1_u8 : 0_u8
+    set_ZN(r)
   end
 
   # FLAGS
 
-  private def setZN(value)
+  private def set_ZN(value)
     @z = value # TODO is this ok?
     @n = (value >> 7) & 0x1
   end
 
-  # stack is at  $0100 and $01FF
-  # SP is an offset to $0100
+  # STACK POINTER
+
+  private def push_stack_2(value)
+    a = (value >> 8).to_u8
+    b = (value & 0xFF).to_u8
+    push_stack a
+    push_stack b
+  end
+
+  private def push_stack(value)
+    write(@sp.to_u16 + 0x100, value)
+    @sp -= 1
+  end
+
+  private def pop_stack
+    @sp += 1
+    read(@sp.to_u16 + 0x100)
+  end
+
+  private def pop_stack_2
+    b = pop_stack.to_u16
+    a = pop_stack.to_u16
+    (a << 8) | b
+  end
 
   # flags
   # 7 6 5 4 3 2 1 0

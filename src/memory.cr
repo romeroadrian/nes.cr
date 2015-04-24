@@ -11,7 +11,7 @@ class Memory
     when address >= 0x8000
       @rom.readPRG(address - 0x8000)
     else
-      0
+      0_u8
     end
   end
 
