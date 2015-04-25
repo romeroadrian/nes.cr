@@ -56,6 +56,17 @@ class Cpu
 
     @pc = @pc + size
 
+    @cycles += Instruction::Cycles[opcode]
+    page_crossed = case addressing_mode
+    when "ABSX"
+      page_crossed?(address - @x.to_u16, address)
+    when "ABSY", "INDY"
+      page_crossed?(address - @y.to_u16, address)
+    else
+      false
+    end
+    @cycles += Instruction::CrossCycles[opcode] if page_crossed
+
     instruction = @instructions[opcode]
     instruction.call address, addressing_mode
   end
@@ -66,7 +77,7 @@ class Cpu
 
     description = "%-31s" % name # TODO
 
-    state = "A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%3d SL:??" % [@a, @x, @y, packed_flags, @sp, @cycles]
+    state = "A:%02x X:%02x Y:%02x P:%02x SP:%02x CYC:%3d SL:??" % [@a, @x, @y, packed_flags, @sp, (@cycles * 3) % 341]
 
     print "%04x  %02x %s %s  %s %s\n" % [@pc, opcode, arg1, arg2, description, state]
   end
@@ -143,12 +154,6 @@ class Cpu
     @sp = @x
   end
 
-  private def bpl(address, mode)
-    if @n == 0
-      @pc = address
-    end
-  end
-
   private def sei(address, mode)
     @i = 1_u8
   end
@@ -158,12 +163,6 @@ class Cpu
   end
 
   private def nop(address, mode)
-  end
-
-  private def bcs(address, mode)
-    if @c > 0
-      @pc = address
-    end
   end
 
   private def sec(address, mode)
@@ -206,12 +205,6 @@ class Cpu
 
   private def plp(address, mode)
     unpack_flags pop_stack
-  end
-
-  private def bmi(address, mode)
-    if @n > 0
-      @pc = address
-    end
   end
 
   private def rti(address, mode)
@@ -290,12 +283,6 @@ class Cpu
     @pc = address
   end
 
-  private def bvc(address, mode)
-    if @v == 0
-      @pc = address
-    end
-  end
-
   private def cli(address, mode)
     raise "TODO"
   end
@@ -330,12 +317,6 @@ class Cpu
     set_ZN @a
   end
 
-  private def bvs(address, mode)
-    if @v > 0
-      @pc = address
-    end
-  end
-
   private def sta(address, mode)
     write address, @a
   end
@@ -360,6 +341,56 @@ class Cpu
 
   private def bcc(address, mode)
     if @c == 0
+      add_branch_cycles address
+      @pc = address
+    end
+  end
+
+  private def bcs(address, mode)
+    if @c > 0
+      add_branch_cycles address
+      @pc = address
+    end
+  end
+
+  private def beq(address, mode)
+    if @z > 0
+      add_branch_cycles address
+      @pc = address
+    end
+  end
+
+  private def bmi(address, mode)
+    if @n > 0
+      add_branch_cycles address
+      @pc = address
+    end
+  end
+
+  private def bne(address, mode)
+    if @z == 0
+      add_branch_cycles address
+      @pc = address
+    end
+  end
+
+  private def bpl(address, mode)
+    if @n == 0
+      add_branch_cycles address
+      @pc = address
+    end
+  end
+
+  private def bvc(address, mode)
+    if @v == 0
+      add_branch_cycles address
+      @pc = address
+    end
+  end
+
+  private def bvs(address, mode)
+    if @v > 0
+      add_branch_cycles address
       @pc = address
     end
   end
@@ -430,12 +461,6 @@ class Cpu
     set_ZN(@y)
   end
 
-  private def bne(address, mode)
-    if @z == 0
-      @pc = address
-    end
-  end
-
   private def inc(address, mode)
     value = read(address) + 1
     write address, value
@@ -446,12 +471,6 @@ class Cpu
     value = read(address) - 1
     write address, value
     set_ZN value
-  end
-
-  private def beq(address, mode)
-    if @z > 0
-      @pc = address
-    end
   end
 
   private def sed(address, mode)
@@ -605,6 +624,17 @@ class Cpu
     b = pop_stack.to_u16
     a = pop_stack.to_u16
     (a << 8) | b
+  end
+
+  # Cycles
+
+  private def add_branch_cycles(address)
+    @cycles += page_crossed?(@pc, address) ? 2 : 1
+  end
+
+  private def page_crossed?(a, b)
+    # higher byte differs
+    (a & 0xFF00) != (b & 0xFF00)
   end
 
   # flags
