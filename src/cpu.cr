@@ -322,7 +322,7 @@ class Cpu
   end
 
   private def sty(address, mode)
-    write address, @x
+    write address, @y
   end
 
   private def stx(address, mode)
