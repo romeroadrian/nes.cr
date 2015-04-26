@@ -518,9 +518,7 @@ class Cpu
   end
 
   private def sax(address, mode)
-    result = @a ^ @x
-    write address, result
-    set_ZN result
+    write address, @a ^ @x
   end
 
   private def xaa(address, mode)
