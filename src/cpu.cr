@@ -179,7 +179,16 @@ class Cpu
   end
 
   private def php(address, mode)
-    push_stack packed_flags
+    push_stack(packed_flags | 0x10)
+  end
+
+  private def plp(address, mode)
+    unpack_flags(pop_stack & 0xEF)
+  end
+
+  private def pla(address, mode)
+    @a = pop_stack
+    set_ZN @a
   end
 
   private def clc(address, mode)
@@ -201,10 +210,6 @@ class Cpu
     @z = (test & @a) == 0 ? 1_u8 : 0_u8
     @v = (test >> 6) & 0x1
     @n = (test >> 7) & 0x1
-  end
-
-  private def plp(address, mode)
-    unpack_flags pop_stack
   end
 
   private def rti(address, mode)
@@ -310,11 +315,6 @@ class Cpu
     @c = test_carry > 0xFF ? 1_u8 : 0_u8
     @v = ((~(old_a ^ value)) & (old_a ^ @a) & 0x80) == 0 ? 0_u8 : 1_u8
     set_ZN(@a)
-  end
-
-  private def pla(address, mode)
-    @a = pop_stack
-    set_ZN @a
   end
 
   private def sta(address, mode)
