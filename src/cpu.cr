@@ -518,7 +518,7 @@ class Cpu
   end
 
   private def sax(address, mode)
-    write address, @a ^ @x
+    write address, @a & @x
   end
 
   private def xaa(address, mode)
