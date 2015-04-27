@@ -29,8 +29,16 @@ class Rom
     (flags6 & (0x1 << 2)) == 1
   end
 
+  def mapper_number
+    (flags7 & 0xF0) | (flags6 >> 4)
+  end
+
   def flags6
     @data[6]
+  end
+
+  def flags7
+    @data[7]
   end
 
   def readPRG(address)

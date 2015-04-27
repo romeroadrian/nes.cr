@@ -14,6 +14,8 @@ if ARGV.length > 0
 
   p "Has trainer: #{rom.has_trainer?}"
 
+  p "Mapper number: #{rom.mapper_number}"
+
   while true
     c.step
   end
