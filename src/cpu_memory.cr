@@ -1,6 +1,6 @@
-class Memory
+class CpuMemory
 
-  def initialize(@rom)
+  def initialize(@rom, @ppu)
     @cpu_ram = CpuRam.new
   end
 
@@ -8,10 +8,12 @@ class Memory
     case
     when address < 0x2000
       @cpu_ram.peek(address)
+    when address < 0x4000
+      @ppu.read_register((address - 0x2000) % 8)
     when address >= 0x8000
-      @rom.readPRG(address - 0x8000)
+      @rom.read_prg(address - 0x8000)
     else
-      0_u8
+      raise "Can't read memory address: 0x#{address.to_s(16)}"
     end
   end
 
@@ -33,6 +35,12 @@ class Memory
     case
     when address < 0x2000
       @cpu_ram.poke(address, value)
+    when address < 0x4000
+      @ppu.write_register((address - 0x2000) % 8, value)
+    when address == 0x4014
+      @ppu.dma_address = value
+    else
+      raise "Can't write memory address: 0x#{address.to_s(16)}"
     end
   end
 

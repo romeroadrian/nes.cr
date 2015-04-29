@@ -1,22 +1,19 @@
-require "./src/rom"
-require "./src/cpu"
-require "./src/memory"
+require "./src/nes"
+require "crsfml"
 
 if ARGV.length > 0
-  rom = Rom.from_file ARGV[0]
-  memory = Memory.new rom
-  c = Cpu.new memory
+  nes = Nes.new ARGV[0]
 
-  p "Valid header: #{rom.valid_header?}"
+  p "Valid header: #{nes.rom.valid_header?}"
 
-  p "PRG banks: #{rom.prg_banks}"
-  p "CHR banks: #{rom.chr_banks}"
+  p "PRG banks: #{nes.rom.prg_banks}"
+  p "CHR banks: #{nes.rom.chr_banks}"
 
-  p "Has trainer: #{rom.has_trainer?}"
+  p "Has trainer: #{nes.rom.has_trainer?}"
 
-  p "Mapper number: #{rom.mapper_number}"
+  p "Mapper number: #{nes.rom.mapper_number}"
 
-  while true
-    c.step
-  end
+  nes.run
+
+  # window = SF::RenderWindow.new(SF.video_mode(800, 600), "NES")
 end

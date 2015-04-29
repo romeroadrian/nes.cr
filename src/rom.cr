@@ -41,10 +41,18 @@ class Rom
     @data[7]
   end
 
-  def readPRG(address)
+  def read_prg(address)
     @data[
       HEADER_SIZE +
       (has_trainer? ? TRAINER_SIZE : 0) +
       (address % (PRG_ROM_SIZE * @prg_banks))]
+  end
+
+  def read_chr(address)
+    @data[
+      HEADER_SIZE +
+      (has_trainer? ? TRAINER_SIZE : 0) +
+      (PRG_ROM_SIZE * @prg_banks) +
+      (address % (CHR_ROM_SIZE * @chr_banks))]
   end
 end
