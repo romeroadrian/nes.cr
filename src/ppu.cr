@@ -6,9 +6,9 @@ class Ppu
   @mask :: UInt8
   @oam_address :: UInt8
   @vram_address :: UInt16
+  @temp_vram_address :: UInt16
   @address_latch :: Bool
   @scroll_x :: UInt8
-  @scroll_y :: UInt8
   @last_register :: UInt8
 
   private getter! memory
@@ -19,8 +19,8 @@ class Ppu
     @last_register = 0_u8
     @oam_address = 0_u8
     @vram_address = 0_u16
+    @temp_vram_address = 0_u16
     @scroll_x = 0_u8
-    @scroll_y = 0_u8
     @address_latch = false
     @sprite_overflow = false
     @spite_collision = false
@@ -48,10 +48,7 @@ class Ppu
   def write_register(number, value)
     case number
     when 0 # 0x2000 = PPUCTRL
-      @control = value
-      # TODO After power/reset, writes to this register are ignored for about 30000 cycles.
-      # TODO check for nmi
-      # TODO When turning on the NMI flag in bit 7, if the PPU is currently in vertical blank and the PPUSTATUS ($2002) vblank flag is set, an NMI will be generated immediately. This can result in graphical errors (most likely a misplaced scroll) if the NMI routine is executed too late in the blanking period to finish on time. To avoid this problem it is prudent to read $2002 immediately before writing $2000 to clear the vblank flag.
+      write_control value
     when 1 # 0x2001 = PPUMASK
       @mask = value
     when 3 # 0x2003 = OAMADDR
@@ -92,6 +89,16 @@ class Ppu
   end
 
   def step
+    #increase cycles and scanlines, check for frame complete
+  end
+
+  def write_control(value)
+    @control = value
+    # t: ....BA.. ........ = d: ......BA
+    @temp_vram_address = (@temp_vram_address & 0xF3FF) | ((value.to_u16 & 0x3) << 10)
+    # TODO After power/reset, writes to this register are ignored for about 30000 cycles.
+    # TODO check for nmi
+    # TODO When turning on the NMI flag in bit 7, if the PPU is currently in vertical blank and the PPUSTATUS ($2002) vblank flag is set, an NMI will be generated immediately. This can result in graphical errors (most likely a misplaced scroll) if the NMI routine is executed too late in the blanking period to finish on time. To avoid this problem it is prudent to read $2002 immediately before writing $2000 to clear the vblank flag.
   end
 
   private def pack_status
@@ -107,19 +114,33 @@ class Ppu
   end
 
   private def write_scroll(value)
-    if @address_latch # write to y
-      @scroll_y = value
-    else
-      @scroll_x = value
+    if @address_latch # second write
+      # t: .CBA..HG FED..... = d: HGFEDCBA
+      # w:                   = 0
+      @temp_vram_address =
+        (@temp_vram_address & 0x8C1F) | ((value.to_u16 & 0x7) << 12)  | ((value.to_u16 >> 3) << 5)
+    else # first write
+      # t: ....... ...HGFED = d: HGFED...
+      # x:              CBA = d: .....CBA
+      # w:                  = 1
+      @temp_vram_address = (@temp_vram_address & 0xFFE0) | (value.to_u16 >> 3)
+      @scroll_x = value & 0x7
     end
     @address_latch = !@address_latch
   end
 
   private def write_address(value)
-    if @address_latch # write to low
-      @vram_address = (@vram_address & 0xFF00) | value.to_u16
-    else # write to hi
-      @vram_address = (@vram_address & 0x00FF) | (value.to_u16 << 8)
+    if @address_latch # second write
+      # t: ....... HGFEDCBA = d: HGFEDCBA
+      # v                   = t
+      # w:                  = 0
+      @temp_vram_address = (@temp_vram_address & 0xFF00) | value.to_u16
+      @vram_address = @temp_vram_address
+    else # first write
+      # t: ..FEDCBA ........ = d: ..FEDCBA
+      # t: .X...... ........ = 0
+      # w:                   = 1
+      @temp_vram_address = (@temp_vram_address & 0x80FF) | ((value.to_u16 & 0x3F) << 8)
     end
     @address_latch = !@address_latch
   end
@@ -143,6 +164,42 @@ class Ppu
     # control bit 2 = 0 => +1
     #                 1 => +32
     (@control >> 2) & 1 == 1 ? 32 : 1
+  end
+
+  private def show_background_in_corner?
+    (@mask >> 1) & 1 == 1
+  end
+
+  private def show_sprites_in_corner?
+    (@mask >> 2) & 1 == 1
+  end
+
+  private def show_background?
+    (@mask >> 3) & 1 == 1
+  end
+
+  private def show_sprites?
+    (@mask >> 4) & 1 == 1
+  end
+
+  private def base_nametable_address
+    @control && 0x3
+  end
+
+  private def sprite_pattern_table
+    (@control >> 3) & 1 == 1 ? 0x1000_u16 : 0x0000_u16
+  end
+
+  private def background_pattern_table
+    (@control >> 4) & 1 == 1 ? 0x1000_u16 : 0x0000_u16
+  end
+
+  private def sprite_size_16?
+    (@control >> 5) & 1 == 1
+  end
+
+  private def should_generate_nmi?
+    (@control >> 7) & 1 == 1
   end
 
   # control register
