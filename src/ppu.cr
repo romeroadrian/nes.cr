@@ -29,6 +29,13 @@ class Ppu
     @oam = StaticArray(UInt8, 256).new { 0_u8 }
     @palette = StaticArray(UInt8, 32).new { 0_u8 }
 
+    @cycle = 0
+    @scan_line = 0
+    @even_frame = true
+
+    @current = Array(Array(UInt8)).new
+    @shown = Array(Array(UInt8)).new
+
     @memory = PpuMemory.new rom, self
   end
 
@@ -90,6 +97,39 @@ class Ppu
 
   def step
     #increase cycles and scanlines, check for frame complete
+
+    # At dot 256 of each scanline -> If rendering is enabled, the PPU
+    # increments the vertical position in v
+    if @cycle == 256 && rendering_enabled?
+      increment_y!
+    end
+
+    # At dot 257 of each scanline -> If rendering is enabled, the PPU copies
+    # all bits related to horizontal position from t to v:
+    if @cycle == 257 && rendering_enabled?
+      copy_x_from_temp
+    end
+
+    # During dots 280 to 304 of the pre-render scanline (end of vblank)
+    # If rendering is enabled, at the end of vblank, shortly after the horizontal
+    # bits are copied from t to v at dot 257, the PPU will repeatedly copy the vertical
+    # bits from t to v from dots 280 to 304
+    if @scan_line == 261 && @cycle >= 280 && @cycle <= 304 && rendering_enabled?
+      copy_y_from_temp
+    end
+
+    # Between dot 328 of a scanline, and 256 of the next scanline
+    # If rendering is enabled, the PPU increments the horizontal position
+    # in v many times across the scanline, it begins at dots 328 and 336,
+    # and will continue through the next scanline at 8, 16, 24... 240, 248,
+    # 256 (every 8 dots across the scanline until 256).
+    # The effective X scroll coordinate is incremented, which will wrap to
+    # the next nametable appropriately. See Wrapping around below.
+    if ((@cycle >= 328 && @cycle <= 336) ||
+       (@cycle >= 0 && @cycle <= 256 && @cycle % 8 == 0)) &&
+        rendering_enabled?
+        increment_x
+     end
   end
 
   def write_control(value)
@@ -182,6 +222,10 @@ class Ppu
     (@mask >> 4) & 1 == 1
   end
 
+  private def rendering_enabled?
+    show_background? || show_sprites?
+  end
+
   private def base_nametable_address
     @control && 0x3
   end
@@ -200,6 +244,43 @@ class Ppu
 
   private def should_generate_nmi?
     (@control >> 7) & 1 == 1
+  end
+
+  private def increment_x!
+    if (@vram_address & 0x001F) == 31
+      @vram_address &= 0xFFE0 # coarse X = 0
+      @vram_address ^= 0x0400 # switch horizontal nametable
+    else
+      @vram_address += 1 # increment coarse X
+    end
+  end
+
+  private def increment_y!
+    if (@vram_address & 0x7000) != 0x7000 # if fine Y < 7
+      @vram_address += 0x1000 # increment fine Y
+    else
+      @vram_address &= 0x8FFF # fine Y = 0
+      y = (@vram_address & 0x03E0) >> 5 # y = coarse Y
+      if y == 29
+        y = 0 # coarse Y = 0
+        @vram_address ^= 0x0800 # switch vertical nametable
+      elsif y == 31
+        y = 0 # coarse Y = 0, nametable not switched
+      else
+        y += 1 # increment coarse Y
+      end
+      @vram_address = (@vram_address & 0xFC1F) | (y << 5) #put coarse Y back into v
+    end
+  end
+
+  private def copy_x_from_temp
+    # v: ....F.. ...EDCBA = t: ....F.. ...EDCBA
+    @vram_address = (@vram_address & 0xFBE0) | (@temp_vram_address & 0x041F)
+  end
+
+  private def copy_y_from_temp
+    # v: IHGF.ED CBA..... = t: IHGF.ED CBA.....
+    @vram_address = (@vram_address & 0x841F) | (@temp_vram_address & 0x7BE0)
   end
 
   # control register
