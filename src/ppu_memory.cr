@@ -14,7 +14,7 @@ class PpuMemory
       # TODO mirroring?
       # TODO this will fail if accesing name/attribute tables 2 and 3
       address = (address - 0x2000) % 0x1000
-      @vram.read address
+      @vram.peek address
     when address < 0x4000 # Image/Sprite palettes
       address = (address - 0x3F00) % 0x20
       @ppu.read_palette address
@@ -30,10 +30,10 @@ class PpuMemory
       # TODO mirroring?
       # TODO this will fail if accesing name/attribute tables 2 and 3
       address = (address - 0x2000) % 0x1000
-      @vram.write address, value
+      @vram.poke address, value
     when address < 0x4000 # Image/Sprite palettes
       address = (address - 0x3F00) % 0x20
-      @ppu.write_palette address
+      @ppu.write_palette address, value
     end
   end
 end

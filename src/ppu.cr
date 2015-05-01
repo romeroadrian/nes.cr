@@ -11,6 +11,8 @@ class Ppu
   @scroll_y :: UInt8
   @last_register :: UInt8
 
+  private getter! memory
+
   def initialize(rom)
     @control = 0_u8
     @mask = 0_u8
@@ -127,12 +129,13 @@ class Ppu
     # The PPUDATA read buffer (post-fetch)
     # When reading while the VRAM address is in the range 0-$3EFF (i.e., before the palettes), the read will return the contents of an internal read buffer. This internal buffer is updated only when reading PPUDATA, and so is preserved across frames. After the CPU reads and gets the contents of the internal buffer, the PPU will immediately update the internal buffer with the byte at the current VRAM address. Thus, after setting the VRAM address, one should first read this register and discard the result.
     # Reading palette data from $3F00-$3FFF works differently. The palette data is placed immediately on the data bus, and hence no dummy read is required. Reading the palettes still updates the internal buffer though, but the data placed in it is the mirrored nametable data that would appear "underneath" the palette. (Checking the PPU memory map should make this clearer.)
-    @memory.read @vram_address
+    value = memory.read @vram_address
     @vram_address += vram_increment
+    value.not_nil!
   end
 
   private def write_vram(value)
-    @memory.write @vram_address, value
+    memory.write @vram_address, value
     @vram_address += vram_increment
   end
 
