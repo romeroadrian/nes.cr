@@ -6,10 +6,12 @@ class Rom
 
   getter prg_banks
   getter chr_banks
+  getter mirror_mode
 
   def initialize(@data)
     @prg_banks = @data[4]
     @chr_banks = @data[5]
+    @mirror_mode = read_mirror_mode
   end
 
   def self.from_file(path)
@@ -54,5 +56,21 @@ class Rom
       (has_trainer? ? TRAINER_SIZE : 0) +
       (PRG_ROM_SIZE * @prg_banks) +
       (address % (CHR_ROM_SIZE * @chr_banks))]
+  end
+
+  private def read_mirror_mode
+    mirror = (flags6 & 0x1) | ((flags6 & 0x8) >> 2)
+    case mirror
+    when 0
+      :horizontal
+    when 1
+      :vertical
+    when 2, 3
+      :single
+    when 4
+      :quad
+    else
+      raise "Mirror mode unkown: #{mirror}"
+    end
   end
 end
