@@ -86,13 +86,16 @@ class Ppu
   end
 
   def read_palette(address)
-    # TODO mirroring?
-    @palette[address]
+    @palette[mirror_palette(address)]
   end
 
   def write_palette(address, value)
-    # TODO mirroring?
-    @palette[address] = value
+    @palette[mirror_palette(address)] = value
+  end
+
+  private def mirror_palette(address)
+    # 0x10 -> 0x00, 0x14 -> 0x04, 0x18 -> 0x08, 0x1C -> 0x0C
+    address >= 0x10 && address % 0x04 == 0 ? address - 0x10 : address
   end
 
   def step
