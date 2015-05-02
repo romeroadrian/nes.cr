@@ -183,15 +183,25 @@ class Ppu
 
   private def fetch_data
     case @cycle % 8
-    when 1
-      # tile address      = 0x2000 | (v & 0x0FFF)
-      address = base_nametable_address | (@vram_address && 0x0FFF)
+    when 1 # 1 and 2
+      # tile address = 0x2000 | (v & 0x0FFF)
+      address = 0x2000 | (@vram_address && 0x0FFF)
       @name_table_data = memory.read(address).not_nil!
-    when 3
+    when 3 # 3 and 4
       # attribute address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07)
       address = 0x23C0_u16 | (@vram_address & 0x0C00) | ((@vram_address >> 4) & 0x38) | ((@vram_address >> 2) & 0x07)
+      # TODO should we calculate the tile data INSIDE the attr table
+      # data of 32x32 or should we delay this when rendering?
       @attr_table_data = memory.read(address).not_nil!
+    when 5 # 5 and 6
+      memory.read(pattern_table_address).not_nil!
+    when 7 # 7 and 8
+      memory.read(pattern_table_address + 8).not_nil!
     end
+  end
+
+  private def pattern_table_address
+    background_pattern_table + @name_table_data.to_u16 * 16 + (@vram_address >> 12) & 7
   end
 
   def write_control(value)
