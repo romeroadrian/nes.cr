@@ -145,7 +145,7 @@ class Ppu
     # If rendering is enabled, at the end of vblank, shortly after the horizontal
     # bits are copied from t to v at dot 257, the PPU will repeatedly copy the vertical
     # bits from t to v from dots 280 to 304
-    if @scan_line == 261 && @cycle >= 280 && @cycle <= 304 && rendering_enabled?
+    if pre_scan_line? && @cycle >= 280 && @cycle <= 304 && rendering_enabled?
       copy_y_from_temp
     end
 
@@ -171,7 +171,7 @@ class Ppu
     end
 
     # Clear vblank flag, sprite 0 and sprite overflow in scanline = 261 and cycle =1
-    if @scan_line == 261 && @cycle == 1
+    if pre_scan_line? && @cycle == 1
       @in_vblank = false
       @spite_collision = false
       @sprite_overflow = false
@@ -179,8 +179,18 @@ class Ppu
   end
 
   private def render
+
   end
 
+  private def compose_tile_data
+    # TODO remember to select the appropiate bits of @name_table_data
+  end
+
+  # Fetch data to render next tile, this happens every 8 cycles
+  # 1.Nametable byte
+  # 2.Attribute table byte
+  # 3.Tile bitmap low
+  # 4.Tile bitmap high (+8 bytes from tile bitmap low)
   private def fetch_data
     case @cycle % 8
     when 1 # 1 and 2
@@ -188,6 +198,8 @@ class Ppu
       address = 0x2000_u16 | (@vram_address && 0x0FFF)
       @name_table_data = memory.read(address).not_nil!
     when 3 # 3 and 4
+      # base attribute table address + name table selector (bits 10-11) of vram +
+      # + 3 hi bits of y coarse + 3 hi bits of x coarse
       # attribute address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07)
       address = 0x23C0_u16 | (@vram_address & 0x0C00) | ((@vram_address >> 4) & 0x38) | ((@vram_address >> 2) & 0x07)
       # TODO should we calculate the tile data INSIDE the attr table
@@ -203,6 +215,7 @@ class Ppu
   end
 
   private def pattern_table_address
+    # pattern table selector + offset using name table index + fine y scroll
     background_pattern_table + @name_table_data.to_u16 * 16 + (@vram_address >> 12) & 7
   end
 
