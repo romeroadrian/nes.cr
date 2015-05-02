@@ -10,6 +10,10 @@ class Ppu
   @address_latch :: Bool
   @scroll_x :: UInt8
   @last_register :: UInt8
+  @name_table_data :: UInt8
+  @attr_table_data :: UInt8
+  @tile_low_data :: UInt8
+  @tile_high_data :: UInt8
 
   private getter! memory
 
@@ -31,10 +35,15 @@ class Ppu
 
     @cycle = 0
     @scan_line = 0
-    @even_frame = true
+    @frame = 0
 
     @current = Array(Array(UInt8)).new
     @shown = Array(Array(UInt8)).new
+
+    @name_table_data = 0_u8
+    @attr_table_data = 0_u8
+    @tile_low_data = 0_u8
+    @tile_high_data = 0_u8
 
     @memory = PpuMemory.new rom, self
   end
@@ -100,6 +109,25 @@ class Ppu
 
   def step
     #increase cycles and scanlines, check for frame complete
+    # TODO odd frames are 1 cycle shorter IF rendering is enabled
+    @cycle += 1
+    if @cycle > 340
+      @cycle = 0
+      @scan_line += 1
+      if @scan_line > 261
+        @scan_line = 0
+        @frame += 1
+      end
+    end
+
+    if rendering_enabled? && visible_scan_line? && visible_cycle?
+      render
+    end
+
+    if rendering_enabled? && visible_scan_line? && fetch_cycle?
+      fetch_data
+    end
+
 
     # At dot 256 of each scanline -> If rendering is enabled, the PPU
     # increments the vertical position in v
@@ -129,10 +157,41 @@ class Ppu
     # The effective X scroll coordinate is incremented, which will wrap to
     # the next nametable appropriately. See Wrapping around below.
     if ((@cycle >= 328 && @cycle <= 336) ||
-       (@cycle >= 0 && @cycle <= 256 && @cycle % 8 == 0)) &&
-        rendering_enabled?
-        increment_x
-     end
+       (@cycle >= 1 && @cycle <= 256)) && @cycle % 8 == 0 && rendering_enabled?
+
+        increment_x!
+    end
+
+    # Sprite evaluation for next scanline happens between cycle 65 and
+    # 256, in visible scanlines
+
+    # Set vblank flag in scanline = 241 and cycle = 1
+    if @scan_line == 241 && @cycle == 1
+      @in_vblank = true
+    end
+
+    # Clear vblank flag, sprite 0 and sprite overflow in scanline = 261 and cycle =1
+    if @scan_line == 261 && @cycle == 1
+      @in_vblank = false
+      @spite_collision = false
+      @sprite_overflow = false
+    end
+  end
+
+  private def render
+  end
+
+  private def fetch_data
+    case @cycle % 8
+    when 1
+      # tile address      = 0x2000 | (v & 0x0FFF)
+      address = base_nametable_address | (@vram_address && 0x0FFF)
+      @name_table_data = memory.read(address).not_nil!
+    when 3
+      # attribute address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07)
+      address = 0x23C0_u16 | (@vram_address & 0x0C00) | ((@vram_address >> 4) & 0x38) | ((@vram_address >> 2) & 0x07)
+      @attr_table_data = memory.read(address).not_nil!
+    end
   end
 
   def write_control(value)
@@ -229,8 +288,10 @@ class Ppu
     show_background? || show_sprites?
   end
 
+  # TODO delete?
+  # this bits are written to temp_vram_address when writing @control
   private def base_nametable_address
-    @control && 0x3
+    0x2000_u16 + (@control && 0x3).to_u16 * 0x400_u16
   end
 
   private def sprite_pattern_table
@@ -284,6 +345,30 @@ class Ppu
   private def copy_y_from_temp
     # v: IHGF.ED CBA..... = t: IHGF.ED CBA.....
     @vram_address = (@vram_address & 0x841F) | (@temp_vram_address & 0x7BE0)
+  end
+
+  private def visible_scan_line?
+    @scan_line < 240
+  end
+
+  private def pre_scan_line?
+    @scan_line == 261
+  end
+
+  private def post_scan_line?
+    @scan_line == 240
+  end
+
+  private def vblank_scan_line?
+    @scan_line > 240 && @scan_line < 261
+  end
+
+  private def visible_cycle?
+    @cycle >= 1 && @cycle <= 256
+  end
+
+  private def fetch_cycle?
+    visible_cycle? || (@cycle >= 321 && @cycle <= 336)
   end
 
   # control register
