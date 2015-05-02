@@ -185,7 +185,7 @@ class Ppu
     case @cycle % 8
     when 1 # 1 and 2
       # tile address = 0x2000 | (v & 0x0FFF)
-      address = 0x2000 | (@vram_address && 0x0FFF)
+      address = 0x2000_u16 | (@vram_address && 0x0FFF)
       @name_table_data = memory.read(address).not_nil!
     when 3 # 3 and 4
       # attribute address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07)
@@ -194,9 +194,11 @@ class Ppu
       # data of 32x32 or should we delay this when rendering?
       @attr_table_data = memory.read(address).not_nil!
     when 5 # 5 and 6
-      memory.read(pattern_table_address).not_nil!
+      # low order byte of pattern table
+      @tile_low_data = memory.read(pattern_table_address).not_nil!
     when 7 # 7 and 8
-      memory.read(pattern_table_address + 8).not_nil!
+      # high order byte of pattern table
+      @tile_high_data = memory.read(pattern_table_address + 8).not_nil!
     end
   end
 
