@@ -1,4 +1,5 @@
 require "./bool"
+require "./color"
 
 class Ppu
 
@@ -14,6 +15,8 @@ class Ppu
   @attr_table_data :: UInt8
   @tile_low_data :: UInt8
   @tile_high_data :: UInt8
+  @tile_data_store :: UInt32
+  @attr_data_store :: UInt16
   @buffer_vram :: UInt8
 
   private getter! memory
@@ -31,6 +34,8 @@ class Ppu
     @spite_collision = false
     @in_vblank = false
     @buffer_vram = 0_u8
+    @tile_data_store = 0_u32
+    @attr_data_store = 0_u16
 
     @oam = StaticArray(UInt8, 256).new { 0_u8 }
     @palette = StaticArray(UInt8, 32).new { 0_u8 }
@@ -39,8 +44,12 @@ class Ppu
     @scan_line = 0
     @frame = 0
 
-    @current = Array(Array(UInt8)).new
-    @shown = Array(Array(UInt8)).new
+    @current = Array(Array(Int32)).new(256) do
+      Array(Int32).new(240) { 0 }
+    end
+    @shown = Array(Array(Int32)).new(256) do
+      Array(Int32).new(240) { 0 }
+    end
 
     @name_table_data = 0_u8
     @attr_table_data = 0_u8
@@ -130,7 +139,6 @@ class Ppu
       fetch_data
     end
 
-
     # At dot 256 of each scanline -> If rendering is enabled, the PPU
     # increments the vertical position in v
     if @cycle == 256 && rendering_enabled?
@@ -170,6 +178,7 @@ class Ppu
     # Set vblank flag in scanline = 241 and cycle = 1
     if @scan_line == 241 && @cycle == 1
       @in_vblank = true
+      @current, @shown = @shown, @current
     end
 
     # Clear vblank flag, sprite 0 and sprite overflow in scanline = 261 and cycle =1
@@ -181,11 +190,37 @@ class Ppu
   end
 
   private def render
-
+    background_color = render_background
+    color_index = read_palette(background_color)
+    @current[@cycle - 1][@scan_line] = Color::Palette[color_index]
   end
 
-  private def compose_tile_data
-    # TODO remember to select the appropiate bits of @name_table_data
+  private def render_background
+    if show_background?
+      attribute = (@attr_data_store >> 8).to_u8
+      tile = (@tile_data_store >> 16).to_u16
+      l_index = 7 - (@cycle % 8)
+      h_index = l_index + 8
+      # select bit from low tile
+      l = ((tile & (0x1 << l_index)) >> l_index).to_u8
+      # select bit from high tile
+      h = ((tile & (0x1 << h_index)) >> (h_index - 1)).to_u8
+      # TODO fine x scrolling!
+      attribute | h | l
+    else
+      0_u8
+    end
+  end
+
+  private def store_background_data
+    # shift registers
+    @attr_data_store <<= 8
+    @tile_data_store <<= 16
+    # save current attribute and tile data
+    @attr_data_store = (@attr_data_store & 0xFF00) | @attr_table_data.to_u16
+    @tile_data_store = (@tile_data_store & 0xFFFF0000) |
+                       (@tile_high_data.to_u32 << 8)
+                        @tile_low_data.to_u32
   end
 
   # Fetch data to render next tile, this happens every 8 cycles
@@ -195,6 +230,9 @@ class Ppu
   # 4.Tile bitmap high (+8 bytes from tile bitmap low)
   private def fetch_data
     case @cycle % 8
+    when 0
+      # store fetched data to be used when rendering background in next 8 cycles
+      store_background_data
     when 1 # 1 and 2
       # tile address = 0x2000 | (v & 0x0FFF)
       address = 0x2000_u16 | (@vram_address && 0x0FFF)
