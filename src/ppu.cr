@@ -274,7 +274,7 @@ class Ppu
     status = @last_register & 0x1F
     status |= @sprite_overflow.to_u8 << 5
     status |= @spite_collision.to_u8 << 6
-    status |= @in_vblank.to_u8 << 5
+    status |= @in_vblank.to_u8 << 7
   end
 
   private def read_status
