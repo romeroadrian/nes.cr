@@ -119,18 +119,6 @@ class Ppu
   end
 
   def step
-    #increase cycles and scanlines, check for frame complete
-    # TODO odd frames are 1 cycle shorter IF rendering is enabled
-    @cycle += 1
-    if @cycle > 340
-      @cycle = 0
-      @scan_line += 1
-      if @scan_line > 261
-        @scan_line = 0
-        @frame += 1
-      end
-    end
-
     if rendering_enabled? && visible_scan_line? && visible_cycle?
       render
     end
@@ -186,6 +174,22 @@ class Ppu
       @in_vblank = false
       @spite_collision = false
       @sprite_overflow = false
+    end
+
+    # Increase cycles and scanlines, check for frame complete
+    # Odd frames are 1 cycle shorter IF rendering is enabled
+    if rendering_enabled? && pre_scan_line? && @cycle == 339 && (@frame % 2 == 1)
+      @cycle += 1
+    end
+
+    @cycle += 1
+    if @cycle > 340
+      @cycle = 0
+      @scan_line += 1
+      if @scan_line > 261
+        @scan_line = 0
+        @frame += 1
+      end
     end
   end
 
