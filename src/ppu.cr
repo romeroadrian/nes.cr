@@ -14,6 +14,7 @@ class Ppu
   @attr_table_data :: UInt8
   @tile_low_data :: UInt8
   @tile_high_data :: UInt8
+  @buffer_vram :: UInt8
 
   private getter! memory
 
@@ -29,6 +30,7 @@ class Ppu
     @sprite_overflow = false
     @spite_collision = false
     @in_vblank = false
+    @buffer_vram = 0_u8
 
     @oam = StaticArray(UInt8, 256).new { 0_u8 }
     @palette = StaticArray(UInt8, 32).new { 0_u8 }
@@ -273,13 +275,21 @@ class Ppu
   end
 
   private def read_vram
-    # TODO buffer
-    # The PPUDATA read buffer (post-fetch)
-    # When reading while the VRAM address is in the range 0-$3EFF (i.e., before the palettes), the read will return the contents of an internal read buffer. This internal buffer is updated only when reading PPUDATA, and so is preserved across frames. After the CPU reads and gets the contents of the internal buffer, the PPU will immediately update the internal buffer with the byte at the current VRAM address. Thus, after setting the VRAM address, one should first read this register and discard the result.
-    # Reading palette data from $3F00-$3FFF works differently. The palette data is placed immediately on the data bus, and hence no dummy read is required. Reading the palettes still updates the internal buffer though, but the data placed in it is the mirrored nametable data that would appear "underneath" the palette. (Checking the PPU memory map should make this clearer.)
-    value = memory.read @vram_address
+    value = memory.read(@vram_address).not_nil!
+
+    # TODO check mirroring?
+    if @vram_address <= 0x3EFF
+      tmp = @buffer_vram
+      @buffer_vram = value
+      value = tmp
+    else
+      # buffer is still updated using the data mirrored from $2F00-$2FFF
+      @buffer_vram = memory.read(@vram_address - 0x1000).not_nil!
+    end
+
     @vram_address += vram_increment
-    value.not_nil!
+
+    value
   end
 
   private def write_vram(value)
