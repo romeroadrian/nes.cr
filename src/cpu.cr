@@ -39,6 +39,8 @@ class Cpu
     @cycles = 0_u64
     @suspend = 0
 
+    @requested_interrupt = nil
+
     init
 
     # TODO move this elsewhere
@@ -51,6 +53,14 @@ class Cpu
       @cycles += 1
       return
     end
+
+    case @requested_interrupt
+    when :nmi
+      perform_nmi
+    when :irq
+      perform_irq if @i == 0
+    end
+    @requested_interrupt = nil
 
     opcode = read(@pc)
     addressing_mode = Instruction::AddressingMode[opcode]
@@ -80,6 +90,26 @@ class Cpu
 
   def suspend_for(n)
     @suspend += n
+  end
+
+  def interrupt(mode)
+    @requested_interrupt = mode
+  end
+
+  private def perform_nmi
+    push_stack_2 @pc
+    push_flags
+    @pc = read2 0xFFFA
+    @i = 1_u8
+    @cycles += 7
+  end
+
+  private def perform_irq
+    push_stack_2 @pc
+    push_flags
+    @pc = read2 0xFFFE
+    @i = 1_u8
+    @cycles += 7
   end
 
   private def print_state(opcode, size, name)
@@ -168,6 +198,10 @@ class Cpu
     @i = 1_u8
   end
 
+  private def cli(address, mode)
+    @i = 0_u8
+  end
+
   private def cld(address, mode)
     @d = 0_u8
   end
@@ -181,8 +215,8 @@ class Cpu
 
   private def brk(address, mode)
     push_stack_2 @pc
-    php(address, mode)
-    sei(address, mode)
+    push_flags
+    @i = 1_u8
     @pc = read2(0xFFFE)
   end
 
@@ -192,6 +226,10 @@ class Cpu
   end
 
   private def php(address, mode)
+    push_flags
+  end
+
+  private def push_flags
     push_stack(packed_flags | 0x10)
   end
 
@@ -299,10 +337,6 @@ class Cpu
 
   private def jmp(address, mode)
     @pc = address
-  end
-
-  private def cli(address, mode)
-    raise "TODO"
   end
 
   private def rts(address, mode)
