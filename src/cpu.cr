@@ -37,6 +37,7 @@ class Cpu
     @n = 0_u8 # N negative flag (0 = positive, 1 = negative)
 
     @cycles = 0_u64
+    @suspend = 0
 
     init
 
@@ -45,6 +46,12 @@ class Cpu
   end
 
   def step
+    if @suspend > 0
+      @suspend -= 1
+      @cycles += 1
+      return
+    end
+
     opcode = read(@pc)
     addressing_mode = Instruction::AddressingMode[opcode]
     size = Instruction::Size[opcode]
@@ -69,6 +76,10 @@ class Cpu
 
     instruction = @instructions[opcode]
     instruction.call address, addressing_mode
+  end
+
+  def suspend_for(n)
+    @suspend += n
   end
 
   private def print_state(opcode, size, name)
