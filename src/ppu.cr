@@ -204,9 +204,11 @@ class Ppu
       # + 3 hi bits of y coarse + 3 hi bits of x coarse
       # attribute address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07)
       address = 0x23C0_u16 | (@vram_address & 0x0C00) | ((@vram_address >> 4) & 0x38) | ((@vram_address >> 2) & 0x07)
-      # TODO should we calculate the tile data INSIDE the attr table
-      # data of 32x32 or should we delay this when rendering?
-      @attr_table_data = memory.read(address).not_nil!
+      # attribute shift = ((v >> 4) & 0x04) | (v & 0x02)
+      shift = ((@vram_address >> 4) & 0x04) | (@vram_address & 0x02)
+      value = memory.read(address).not_nil!
+      # shift attribute table and select bits 1-0
+      @attr_table_data = ((value >> shift) & 0x03) << 2
     when 5 # 5 and 6
       # low order byte of pattern table
       @tile_low_data = memory.read(pattern_table_address).not_nil!
@@ -218,7 +220,7 @@ class Ppu
 
   private def pattern_table_address
     # pattern table selector + offset using name table index + fine y scroll
-    background_pattern_table + @name_table_data.to_u16 * 16 + (@vram_address >> 12) & 7
+    background_pattern_table + @name_table_data.to_u16 * 16 + (@vram_address >> 12) & 0x7
   end
 
   def write_control(value)
