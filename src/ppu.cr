@@ -236,7 +236,7 @@ class Ppu
     when 1 # 1 and 2
       # tile address = 0x2000 | (v & 0x0FFF)
       address = 0x2000_u16 | (@vram_address && 0x0FFF)
-      @name_table_data = memory.read(address).not_nil!
+      @name_table_data = memory.read(address)
     when 3 # 3 and 4
       # base attribute table address + name table selector (bits 10-11) of vram +
       # + 3 hi bits of y coarse + 3 hi bits of x coarse
@@ -244,15 +244,15 @@ class Ppu
       address = 0x23C0_u16 | (@vram_address & 0x0C00) | ((@vram_address >> 4) & 0x38) | ((@vram_address >> 2) & 0x07)
       # attribute shift = ((v >> 4) & 0x04) | (v & 0x02)
       shift = ((@vram_address >> 4) & 0x04) | (@vram_address & 0x02)
-      value = memory.read(address).not_nil!
+      value = memory.read(address)
       # shift attribute table and select bits 1-0
       @attr_table_data = ((value >> shift) & 0x03) << 2
     when 5 # 5 and 6
       # low order byte of pattern table
-      @tile_low_data = memory.read(pattern_table_address).not_nil!
+      @tile_low_data = memory.read(pattern_table_address)
     when 7 # 7 and 8
       # high order byte of pattern table
-      @tile_high_data = memory.read(pattern_table_address + 8).not_nil!
+      @tile_high_data = memory.read(pattern_table_address + 8)
     end
   end
 
@@ -315,7 +315,7 @@ class Ppu
   end
 
   private def read_vram
-    value = memory.read(@vram_address).not_nil!
+    value = memory.read(@vram_address)
 
     # TODO check mirroring?
     if @vram_address <= 0x3EFF
@@ -324,7 +324,7 @@ class Ppu
       value = tmp
     else
       # buffer is still updated using the data mirrored from $2F00-$2FFF
-      @buffer_vram = memory.read(@vram_address - 0x1000).not_nil!
+      @buffer_vram = memory.read(@vram_address - 0x1000)
     end
 
     @vram_address += vram_increment

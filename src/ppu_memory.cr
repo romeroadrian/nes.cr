@@ -15,6 +15,8 @@ class PpuMemory
     when address < 0x4000 # Image/Sprite palettes
       address = (address - 0x3F00) % 0x20
       @ppu.read_palette address
+    else
+      raise "Should not happen"
     end
   end
 
