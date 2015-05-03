@@ -124,8 +124,7 @@ class Cpu
 
   private def init
     # 6502 begins execution at u16 in 0xFFFC
-    # @pc = read2(0xFFFC)
-    @pc = 0xC000_u16
+    @pc = read2(0xFFFC)
     # SP starts at 0xFD
     @sp = 0xFD_u8
     # Flag I
