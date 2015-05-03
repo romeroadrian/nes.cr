@@ -170,7 +170,10 @@ class Cpu
   end
 
   private def brk(address, mode)
-    raise "TODO"
+    push_stack_2 @pc
+    php(address, mode)
+    sei(address, mode)
+    @pc = read2(0xFFFE)
   end
 
   private def ora(address, mode)
