@@ -262,9 +262,9 @@ class Ppu
         if x <= current_x && current_x < x + 8
           tile = @sprite_tile_data[i]
           attr = @sprite_attr_data[i]
-          # TODO flip horizontal (read bit 6 of attributes)
+          flip_h = (attr >> 6) & 0x1 == 0x1
           offset = current_x - x
-          l_index = 7 - offset
+          l_index = flip_h ? offset : 7 - offset
           h_index = l_index + 8
           l = ((tile & (0x1 << l_index)) >> l_index).to_u8
           h = ((tile & (0x1 << h_index)) >> (h_index - 1)).to_u8
@@ -361,7 +361,11 @@ class Ppu
 
       current_y = @scan_line - y.to_i
 
-      # TODO flip vertical (read bit 7 of attributes)
+      # flip vertical
+      if (attrs >> 7) == 0x1
+        current_y = (sprite_size_16? ? 15 : 7) - current_y
+      end
+
       base_address = if sprite_size_16?
         index & 0x1 == 0 ? 0x0000_u16 : 0x1000_u16
       else
