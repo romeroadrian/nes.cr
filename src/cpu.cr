@@ -19,6 +19,8 @@ class Cpu
 
   @cycles :: UInt64
 
+  getter cycles
+
   def initialize(@memory)
     # CPU Registers
     @a = 0_u8     # accumulator 8bits
@@ -69,7 +71,7 @@ class Cpu
 
     address = solve_address addressing_mode
 
-    print_state opcode, size, name
+    # print_state opcode, size, name
 
     @pc = @pc + size
 
@@ -172,7 +174,7 @@ class Cpu
     @i = 1_u8
   end
 
-  private def read(address)
+  def read(address)
     @memory.read address
   end
 
@@ -186,6 +188,7 @@ class Cpu
 
   private def write(address, value)
     @memory.write address, value
+    1
   end
 
   # INSTRUCTIONS

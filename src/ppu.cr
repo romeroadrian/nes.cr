@@ -19,7 +19,11 @@ class Ppu
   @attr_data_store :: UInt16
   @buffer_vram :: UInt8
 
+  getter shown
+  setter cpu
+
   private getter! memory
+  private getter! cpu
 
   def initialize(rom)
     @control = 0_u8
@@ -38,10 +42,16 @@ class Ppu
     @attr_data_store = 0_u16
 
     @oam = StaticArray(UInt8, 256).new { 0_u8 }
+    @secondary_oam = StaticArray(UInt8, 32).new { 0_u8 }
+    @sprite_tile_data = StaticArray(UInt16, 8).new { 0_u16 }
+    @sprite_attr_data = StaticArray(UInt8, 8).new { 0_u8 }
+    @sprite_x_data = StaticArray(UInt8, 8).new { 0_u8 }
+    @sprite_count = 0
+
     @palette = StaticArray(UInt8, 32).new { 0_u8 }
 
     @cycle = 0
-    @scan_line = 0
+    @scan_line = 241
     @frame = 0
 
     @current = Array(Array(Int32)).new(256) do
@@ -90,19 +100,20 @@ class Ppu
     when 7 # 0x2007 = PPUDATA
       write_vram value
     end
+
+    if number != 2
+      @last_register = value
+    end
   end
 
   # 0x4014 = OAMDMA
   def dma_address=(value)
     address = value.to_u16 * 256
-    0.upto(255) do |i|
-      # @oam[@oam_address] = @nes.cpu.read(address + i)
-      # TODO wire cpu or cpu_memory
-      @oam[@oam_address] = 0_u8
+    256.times do |i|
+      @oam[@oam_address] = cpu.read(address + i)
       @oam_address += 1
     end
-    # TODO CPU should be suspended
-    # The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick. (1 idle cycle, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
+    cpu.suspend_for(cpu.cycles % 2 == 1 ? 514 : 513)
   end
 
   def read_palette(address)
@@ -123,19 +134,19 @@ class Ppu
       render
     end
 
-    if rendering_enabled? && visible_scan_line? && fetch_cycle?
+    if rendering_enabled? && (visible_scan_line? || pre_scan_line?) && fetch_cycle?
       fetch_data
     end
 
     # At dot 256 of each scanline -> If rendering is enabled, the PPU
     # increments the vertical position in v
-    if @cycle == 256 && rendering_enabled?
+    if rendering_enabled? && render_scan_line? && @cycle == 256
       increment_y!
     end
 
     # At dot 257 of each scanline -> If rendering is enabled, the PPU copies
     # all bits related to horizontal position from t to v:
-    if @cycle == 257 && rendering_enabled?
+    if @cycle == 257 && rendering_enabled? && rendering_enabled?
       copy_x_from_temp
     end
 
@@ -155,18 +166,32 @@ class Ppu
     # The effective X scroll coordinate is incremented, which will wrap to
     # the next nametable appropriately. See Wrapping around below.
     if ((@cycle >= 328 && @cycle <= 336) ||
-       (@cycle >= 1 && @cycle <= 256)) && @cycle % 8 == 0 && rendering_enabled?
+       (@cycle >= 1 && @cycle <= 256)) && @cycle % 8 == 0 && rendering_enabled? && render_scan_line?
 
         increment_x!
     end
 
     # Sprite evaluation for next scanline happens between cycle 65 and
     # 256, in visible scanlines
+    if rendering_enabled? && visible_scan_line?
+      if @cycle == 63
+        clear_secondary_oam
+      end
+      if @cycle == 256
+        evaluate_sprites
+      end
+      if @cycle == 319
+        fetch_sprites
+      end
+    end
 
     # Set vblank flag in scanline = 241 and cycle = 1
     if @scan_line == 241 && @cycle == 1
       @in_vblank = true
       @current, @shown = @shown, @current
+      if should_generate_nmi?
+        cpu.interrupt :nmi
+      end
     end
 
     # Clear vblank flag, sprite 0 and sprite overflow in scanline = 261 and cycle =1
@@ -194,16 +219,27 @@ class Ppu
   end
 
   private def render
+    x = @cycle - 1
+    y = @scan_line
+    # TODO: priority of sprite over background
     background_color = render_background
-    color_index = read_palette(background_color)
-    @current[@cycle - 1][@scan_line] = Color::Palette[color_index]
+    sprite_color = render_sprite
+
+    color = if sprite_color == 0
+      background_color
+    else
+      sprite_color | 0x10
+    end
+
+    color_index = read_palette(color.to_u16)
+    @current[x][y] = Color::Palette[color_index]
   end
 
   private def render_background
     if show_background?
       attribute = (@attr_data_store >> 8).to_u8
       tile = (@tile_data_store >> 16).to_u16
-      l_index = 7 - (@cycle % 8)
+      l_index = 7 - ((@cycle - 1) % 8)
       h_index = l_index + 8
       # select bit from low tile
       l = ((tile & (0x1 << l_index)) >> l_index).to_u8
@@ -216,6 +252,30 @@ class Ppu
     end
   end
 
+  private def render_sprite
+    color = 0_u8
+    if show_sprites?
+      i = 0
+      current_x = @cycle - 1
+      while color == 0 && i < @sprite_count
+        x = @sprite_x_data[i]
+        if x <= current_x && current_x < x + 8
+          tile = @sprite_tile_data[i]
+          attr = @sprite_attr_data[i]
+          # TODO flip horizontal (read bit 6 of attributes)
+          offset = current_x - x
+          l_index = 7 - offset
+          h_index = l_index + 8
+          l = ((tile & (0x1 << l_index)) >> l_index).to_u8
+          h = ((tile & (0x1 << h_index)) >> (h_index - 1)).to_u8
+          color = ((attr & 0x3) << 2) | h | l
+        end
+        i += 1
+      end
+    end
+    color
+  end
+
   private def store_background_data
     # shift registers
     @attr_data_store <<= 8
@@ -223,7 +283,7 @@ class Ppu
     # save current attribute and tile data
     @attr_data_store = (@attr_data_store & 0xFF00) | @attr_table_data.to_u16
     @tile_data_store = (@tile_data_store & 0xFFFF0000) |
-                       (@tile_high_data.to_u32 << 8)
+                       (@tile_high_data.to_u32 << 8) |
                         @tile_low_data.to_u32
   end
 
@@ -239,7 +299,7 @@ class Ppu
       store_background_data
     when 1 # 1 and 2
       # tile address = 0x2000 | (v & 0x0FFF)
-      address = 0x2000_u16 | (@vram_address && 0x0FFF)
+      address = 0x2000_u16 | (@vram_address & 0x0FFF)
       @name_table_data = memory.read(address)
     when 3 # 3 and 4
       # base attribute table address + name table selector (bits 10-11) of vram +
@@ -262,7 +322,67 @@ class Ppu
 
   private def pattern_table_address
     # pattern table selector + offset using name table index + fine y scroll
-    background_pattern_table + @name_table_data.to_u16 * 16 + (@vram_address >> 12) & 0x7
+    background_pattern_table + @name_table_data.to_u16 * 16 + ((@vram_address >> 12) & 0x7_u16)
+  end
+
+  private def clear_secondary_oam
+    32.times { |i| @secondary_oam[i] = 0xFF_u8 }
+  end
+
+  private def evaluate_sprites
+    @sprite_count = 0
+    height = sprite_size_16? ? 16 : 8
+    64.times do |i|
+      y = @oam[i * 4]
+      # if it's in range, add to secondary oam
+      if y <= @scan_line && @scan_line < y + height
+        @secondary_oam[@sprite_count * 4]     = y
+        @secondary_oam[@sprite_count * 4 + 1] = @oam[i * 4 + 1]
+        @secondary_oam[@sprite_count * 4 + 2] = @oam[i * 4 + 2]
+        @secondary_oam[@sprite_count * 4 + 3] = @oam[i * 4 + 3]
+
+        @sprite_count += 1
+
+        if @sprite_count == 8
+          @sprite_overflow = true
+          break
+        end
+      end
+    end
+  end
+
+  private def fetch_sprites
+    # process secondary oam into sprite data registers
+    @sprite_count.times do |i|
+      y     = @secondary_oam[i * 4]
+      index = @secondary_oam[i * 4 + 1]
+      attrs = @secondary_oam[i * 4 + 2]
+      x     = @secondary_oam[i * 4 + 3]
+
+      current_y = @scan_line - y.to_i
+
+      # TODO flip vertical (read bit 7 of attributes)
+      base_address = if sprite_size_16?
+        index & 0x1 == 0 ? 0x0000_u16 : 0x1000_u16
+      else
+        sprite_pattern_table
+      end
+
+      offset = sprite_size_16? ? index & 0xFE : index
+
+      if sprite_size_16? && current_y > 7
+        offset += 1
+        current_y -= 8
+      end
+
+      address = base_address + offset.to_u16 * 16 + current_y.to_u16
+      low_tile = memory.read(address)
+      high_tile = memory.read(address + 8)
+
+      @sprite_tile_data[i] = (high_tile.to_u16 << 8) | low_tile.to_u16
+      @sprite_attr_data[i] = attrs
+      @sprite_x_data[i]    = x
+    end
   end
 
   def write_control(value)
@@ -370,7 +490,7 @@ class Ppu
   # TODO delete?
   # this bits are written to temp_vram_address when writing @control
   private def base_nametable_address
-    0x2000_u16 + (@control && 0x3).to_u16 * 0x400_u16
+    0x2000_u16 + (@control & 0x3).to_u16 * 0x400_u16
   end
 
   private def sprite_pattern_table
@@ -432,6 +552,10 @@ class Ppu
 
   private def pre_scan_line?
     @scan_line == 261
+  end
+
+  private def render_scan_line?
+    visible_scan_line? || pre_scan_line?
   end
 
   private def post_scan_line?

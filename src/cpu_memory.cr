@@ -13,7 +13,8 @@ class CpuMemory
     when address >= 0x8000
       @rom.read_prg(address - 0x8000)
     else
-      raise "Can't read memory address: 0x#{address.to_s(16)}"
+      0_u8
+      # raise "Can't read memory address: 0x#{address.to_s(16)}"
     end
   end
 
@@ -39,8 +40,8 @@ class CpuMemory
       @ppu.write_register((address - 0x2000) % 8, value)
     when address == 0x4014
       @ppu.dma_address = value
-    else
-      raise "Can't write memory address: 0x#{address.to_s(16)}"
+    # else
+      # raise "Can't write memory address: 0x#{address.to_s(16)}"
     end
   end
 

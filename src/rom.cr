@@ -58,6 +58,14 @@ class Rom
       (address % (CHR_ROM_SIZE * @chr_banks))]
   end
 
+  def write_chr(address, value)
+    @data[
+      HEADER_SIZE +
+      (has_trainer? ? TRAINER_SIZE : 0) +
+      (PRG_ROM_SIZE * @prg_banks) +
+      (address % (CHR_ROM_SIZE * @chr_banks))] = value
+  end
+
   private def read_mirror_mode
     mirror = (flags6 & 0x1) | ((flags6 & 0x8) >> 2)
     case mirror
