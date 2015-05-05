@@ -225,7 +225,7 @@ class Ppu
     background_color = render_background
     sprite_color = render_sprite
 
-    color = if sprite_color == 0
+    color = if sprite_color % 4 == 0
       background_color
     else
       sprite_color | 0x10
