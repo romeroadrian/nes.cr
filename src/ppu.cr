@@ -35,7 +35,7 @@ class Ppu
     @scroll_x = 0_u8
     @address_latch = false
     @sprite_overflow = false
-    @spite_collision = false
+    @sprite_collision = false
     @in_vblank = false
     @buffer_vram = 0_u8
     @tile_data_store = 0_u32
@@ -182,7 +182,7 @@ class Ppu
     # Clear vblank flag, sprite 0 and sprite overflow in scanline = 261 and cycle =1
     if pre_scan_line? && @cycle == 1
       @in_vblank = false
-      @spite_collision = false
+      @sprite_collision = false
       @sprite_overflow = false
     end
 
@@ -386,7 +386,7 @@ class Ppu
   private def pack_status
     status = @last_register & 0x1F
     status |= @sprite_overflow.to_u8 << 5
-    status |= @spite_collision.to_u8 << 6
+    status |= @sprite_collision.to_u8 << 6
     status |= @in_vblank.to_u8 << 7
   end
 
