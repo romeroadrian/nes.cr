@@ -130,45 +130,30 @@ class Ppu
   end
 
   def step
-    if rendering_enabled? && visible_scan_line? && visible_cycle?
-      render
-    end
+    if rendering_enabled?
+      if visible_scan_line? && visible_cycle?
+        render
+      end
 
-    if rendering_enabled? && (visible_scan_line? || pre_scan_line?) && fetch_cycle?
-      fetch_data
-    end
+      if (visible_scan_line? || pre_scan_line?) && fetch_cycle?
+        fetch_data
+      end
 
-    # At dot 256 of each scanline -> If rendering is enabled, the PPU
-    # increments the vertical position in v
-    if rendering_enabled? && render_scan_line? && @cycle == 256
-      increment_y!
-    end
+      if @cycle == 256 && render_scan_line?
+        increment_y!
+      end
 
-    # At dot 257 of each scanline -> If rendering is enabled, the PPU copies
-    # all bits related to horizontal position from t to v:
-    if @cycle == 257 && rendering_enabled? && rendering_enabled?
-      copy_x_from_temp
-    end
+      if @cycle == 257 && render_scan_line?
+        copy_x_from_temp
+      end
 
-    # During dots 280 to 304 of the pre-render scanline (end of vblank)
-    # If rendering is enabled, at the end of vblank, shortly after the horizontal
-    # bits are copied from t to v at dot 257, the PPU will repeatedly copy the vertical
-    # bits from t to v from dots 280 to 304
-    if pre_scan_line? && @cycle >= 280 && @cycle <= 304 && rendering_enabled?
-      copy_y_from_temp
-    end
+      if pre_scan_line? && @cycle >= 280 && @cycle <= 304
+        copy_y_from_temp
+      end
 
-    # Between dot 328 of a scanline, and 256 of the next scanline
-    # If rendering is enabled, the PPU increments the horizontal position
-    # in v many times across the scanline, it begins at dots 328 and 336,
-    # and will continue through the next scanline at 8, 16, 24... 240, 248,
-    # 256 (every 8 dots across the scanline until 256).
-    # The effective X scroll coordinate is incremented, which will wrap to
-    # the next nametable appropriately. See Wrapping around below.
-    if ((@cycle >= 328 && @cycle <= 336) ||
-       (@cycle >= 1 && @cycle <= 256)) && @cycle % 8 == 0 && rendering_enabled? && render_scan_line?
-
+      if fetch_cycle? && @cycle % 8 == 0 && render_scan_line?
         increment_x!
+      end
     end
 
     # Sprite evaluation for next scanline happens between cycle 65 and
