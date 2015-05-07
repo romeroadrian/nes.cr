@@ -476,12 +476,6 @@ class Ppu
     show_background? || show_sprites?
   end
 
-  # TODO delete?
-  # this bits are written to temp_vram_address when writing @control
-  private def base_nametable_address
-    0x2000_u16 + (@control & 0x3).to_u16 * 0x400_u16
-  end
-
   private def sprite_pattern_table
     (@control >> 3) & 1 == 1 ? 0x1000_u16 : 0x0000_u16
   end
