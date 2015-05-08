@@ -47,6 +47,7 @@ class Ppu
     @sprite_attr_data = StaticArray(UInt8, 8).new { 0_u8 }
     @sprite_x_data = StaticArray(UInt8, 8).new { 0_u8 }
     @sprite_count = 0
+    @current_sprite_index = 0
 
     @palette = StaticArray(UInt8, 32).new { 0_u8 }
 
@@ -206,17 +207,12 @@ class Ppu
   private def render
     x = @cycle - 1
     y = @scan_line
-    # TODO: priority of sprite over background
+
     background_color = render_background
     sprite_color = render_sprite
+    color = compose_colors(background_color, sprite_color)
 
-    color = if sprite_color % 4 == 0
-      background_color
-    else
-      sprite_color | 0x10
-    end
-
-    color_index = read_palette(color.to_u16)
+    color_index = read_palette(color)
     @current[x][y] = Color::Palette[color_index]
   end
 
@@ -236,12 +232,15 @@ class Ppu
 
   private def render_sprite
     color = 0_u8
+
     if show_sprites?
       i = 0
       current_x = @cycle - 1
-      while color == 0 && i < @sprite_count
+
+      while universal?(color) && i < @sprite_count
         x = @sprite_x_data[i]
         if x <= current_x && current_x < x + 8
+          @current_sprite_index = i
           tile = @sprite_tile_data[i]
           attr = @sprite_attr_data[i]
           flip_h = (attr >> 6) & 0x1 == 0x1
@@ -255,7 +254,38 @@ class Ppu
         i += 1
       end
     end
+
     color
+  end
+
+  private def compose_colors(background, sprite)
+    current_x = @cycle - 1
+
+    if current_x < 8
+      background = 0_u8 unless show_background_in_left?
+      sprite = 0_u8 unless show_sprites_in_left?
+    end
+
+    bg_universal = universal?(background)
+    sprite_universal = universal?(sprite)
+
+    case
+    when !bg_universal && !sprite_universal
+      priority = ((@sprite_attr_data[@current_sprite_index] >> 5) & 1) == 1
+      is_sprite_0 = ((@sprite_attr_data[@current_sprite_index] >> 4) & 1) == 1
+
+      # Detect collision
+      @sprite_collision = is_sprite_0 && current_x < 255
+
+      # If priority is set, background wins
+      priority ? background : (sprite | 0x10)
+    when bg_universal && !sprite_universal
+      sprite | 0x10
+    when !bg_universal && sprite_universal
+      background
+    else
+      0_u8
+    end
   end
 
   private def store_background_data
@@ -319,7 +349,8 @@ class Ppu
       if y <= @scan_line && @scan_line < y + height
         @secondary_oam[@sprite_count * 4]     = y
         @secondary_oam[@sprite_count * 4 + 1] = @oam[i * 4 + 1]
-        @secondary_oam[@sprite_count * 4 + 2] = @oam[i * 4 + 2]
+        # HACK: inject sprite0 flag in attrs bit 4 (unused)
+        @secondary_oam[@sprite_count * 4 + 2] = (@oam[i * 4 + 2] & 0xEF) | (i == 0 ? 0x10 : 0x0)
         @secondary_oam[@sprite_count * 4 + 3] = @oam[i * 4 + 3]
 
         @sprite_count += 1
@@ -452,11 +483,11 @@ class Ppu
     (@control >> 2) & 1 == 1 ? 32 : 1
   end
 
-  private def show_background_in_corner?
+  private def show_background_in_left?
     (@mask >> 1) & 1 == 1
   end
 
-  private def show_sprites_in_corner?
+  private def show_sprites_in_left?
     (@mask >> 2) & 1 == 1
   end
 
@@ -551,6 +582,10 @@ class Ppu
 
   private def fetch_cycle?
     visible_cycle? || (@cycle >= 321 && @cycle <= 336)
+  end
+
+  private def universal?(color)
+    color % 4 == 0
   end
 
   # control register
