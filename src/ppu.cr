@@ -222,16 +222,13 @@ class Ppu
 
   private def render_background
     if show_background?
-      attribute = (@attr_data_store >> 8).to_u8
-      tile = (@tile_data_store >> 16).to_u16
-      l_index = 7 - ((@cycle - 1) % 8)
-      h_index = l_index + 8
-      # select bit from low tile
+      tile = @tile_data_store
+      l_index = 15 - ((@cycle - 1) % 8) - @scroll_x
+      h_index = l_index + 16
       l = ((tile & (0x1 << l_index)) >> l_index).to_u8
-      # select bit from high tile
       h = ((tile & (0x1 << h_index)) >> (h_index - 1)).to_u8
-      # TODO fine x scrolling!
-      attribute | h | l
+      attr = (l_index < 8 ? @attr_data_store : @attr_data_store >> 8).to_u8
+      attr | h | l
     else
       0_u8
     end
@@ -262,14 +259,13 @@ class Ppu
   end
 
   private def store_background_data
-    # shift registers
     @attr_data_store <<= 8
-    @tile_data_store <<= 16
-    # save current attribute and tile data
     @attr_data_store = (@attr_data_store & 0xFF00) | @attr_table_data.to_u16
-    @tile_data_store = (@tile_data_store & 0xFFFF0000) |
-                       (@tile_high_data.to_u32 << 8) |
-                        @tile_low_data.to_u32
+
+    @tile_data_store <<= 8
+    @tile_data_store &= 0xFF00FF00
+    @tile_data_store |= @tile_high_data.to_u32 << 16
+    @tile_data_store |= @tile_low_data.to_u32
   end
 
   # Fetch data to render next tile, this happens every 8 cycles
