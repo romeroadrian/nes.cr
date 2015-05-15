@@ -7,11 +7,15 @@ class Rom
   getter prg_banks
   getter chr_banks
   getter mirror_mode
+  private getter! chr_ram
 
   def initialize(@data)
     @prg_banks = @data[4]
     @chr_banks = @data[5]
     @mirror_mode = read_mirror_mode
+    if @chr_banks == 0
+      @chr_ram = Array(UInt8).new(CHR_ROM_SIZE, 0_u8)
+    end
   end
 
   def self.from_file(path)
@@ -47,23 +51,31 @@ class Rom
     @data[
       HEADER_SIZE +
       (has_trainer? ? TRAINER_SIZE : 0) +
-      (address % (PRG_ROM_SIZE * @prg_banks))]
+      address]
   end
 
   def read_chr(address)
-    @data[
-      HEADER_SIZE +
-      (has_trainer? ? TRAINER_SIZE : 0) +
-      (PRG_ROM_SIZE * @prg_banks) +
-      (address % (CHR_ROM_SIZE * @chr_banks))]
+    if @chr_banks == 0
+      chr_ram[address]
+    else
+      @data[
+        HEADER_SIZE +
+        (has_trainer? ? TRAINER_SIZE : 0) +
+        (PRG_ROM_SIZE * @prg_banks) +
+        (address % (CHR_ROM_SIZE * @chr_banks))]
+    end
   end
 
   def write_chr(address, value)
-    @data[
-      HEADER_SIZE +
-      (has_trainer? ? TRAINER_SIZE : 0) +
-      (PRG_ROM_SIZE * @prg_banks) +
-      (address % (CHR_ROM_SIZE * @chr_banks))] = value
+    if @chr_banks == 0
+      chr_ram[address] = value
+    else
+      @data[
+        HEADER_SIZE +
+        (has_trainer? ? TRAINER_SIZE : 0) +
+        (PRG_ROM_SIZE * @prg_banks) +
+        (address % (CHR_ROM_SIZE * @chr_banks))] = value
+    end
   end
 
   private def read_mirror_mode

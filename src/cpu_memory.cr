@@ -1,6 +1,6 @@
 class CpuMemory
 
-  def initialize(@rom, @ppu, @control_pad)
+  def initialize(@mapper, @ppu, @control_pad)
     @cpu_ram = CpuRam.new
   end
 
@@ -13,7 +13,7 @@ class CpuMemory
     when address == 0x4016
       @control_pad.read
     when address >= 0x8000
-      @rom.read_prg(address - 0x8000)
+      @mapper.read_prg(address - 0x8000)
     else
       0_u8
       # raise "Can't read memory address: 0x#{address.to_s(16)}"
@@ -44,6 +44,8 @@ class CpuMemory
       @ppu.dma_address = value
     when address == 0x4016
       @control_pad.write value
+    when address >= 0x8000
+      @mapper.write_prg(address - 0x8000, value)
     # else
       # raise "Can't write memory address: 0x#{address.to_s(16)}"
     end
