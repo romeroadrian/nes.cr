@@ -1,12 +1,12 @@
 # nes.cr
 
-To compile:
+## Compile
 
 ```
 make
 ```
 
-To run:
+## Run
 
 ```
 ./nes rom_file.nes
@@ -19,3 +19,7 @@ To run:
 * X: B
 * O: Start
 * P: Select
+
+## Issues
+
+Runs too fast right now, needs frame limit.
