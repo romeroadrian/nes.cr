@@ -1,7 +1,8 @@
 require "./sdl/sdl"
 require "./src/nes"
 
-nes = Nes.new ARGV[0]
+filename = ARGV.first? || abort("error: missing rom filename")
+nes = Nes.new filename
 
 p "PRG banks: #{nes.rom.prg_banks}"
 p "CHR banks: #{nes.rom.chr_banks}"
