@@ -46,8 +46,6 @@ class Cpu
 
     @requested_interrupt = nil
 
-    @instructions = build_instructions
-
     init
   end
 
@@ -89,8 +87,7 @@ class Cpu
     end
     @cycles += Instruction::CrossCycles[opcode] if page_crossed
 
-    instruction = @instructions[opcode]
-    instruction.call address, addressing_mode
+    handle_opcode opcode, address, addressing_mode
   end
 
   def suspend_for(n)

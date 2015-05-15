@@ -1,6 +1,6 @@
 class VRam
   def initialize
-    @mem = StaticArray(UInt8, 0x800).new { 0_u8 }
+    @mem = Array.new(0x800, 0_u8)
   end
 
   def peek(address)

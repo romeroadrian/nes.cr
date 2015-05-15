@@ -41,15 +41,15 @@ class Ppu
     @tile_data_store = 0_u32
     @attr_data_store = 0_u16
 
-    @oam = StaticArray(UInt8, 256).new { 0_u8 }
-    @secondary_oam = StaticArray(UInt8, 32).new { 0_u8 }
-    @sprite_tile_data = StaticArray(UInt16, 8).new { 0_u16 }
-    @sprite_attr_data = StaticArray(UInt8, 8).new { 0_u8 }
-    @sprite_x_data = StaticArray(UInt8, 8).new { 0_u8 }
+    @oam = Array.new(256, 0_u8)
+    @secondary_oam = Array.new(32, 0_u8)
+    @sprite_tile_data = Array.new(8, 0_u16)
+    @sprite_attr_data = Array.new(8, 0_u8)
+    @sprite_x_data = Array.new(8, 0_u8)
     @sprite_count = 0
     @current_sprite_index = 0
 
-    @palette = StaticArray(UInt8, 32).new { 0_u8 }
+    @palette = Array.new(32, 0_u8)
 
     @cycle = 0
     @scan_line = 241
