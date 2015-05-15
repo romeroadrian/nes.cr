@@ -23,49 +23,55 @@ def color(x)
   (b << 24) | (g << 16) | (r << 8) | 0xFF
 end
 
+count = 0
+
 while true
-  SDL.poll_events do |event|
-    case event.type
-    when LibSDL::QUIT
-      SDL.quit
-      exit
-    when LibSDL::KEYDOWN
-      case event.key.key_sym.sym
-      when LibSDL::Key::Z
-        nes.control_pad.press(ControlPad::Button::A)
-      when LibSDL::Key::X
-        nes.control_pad.press(ControlPad::Button::B)
-      when LibSDL::Key::UP
-        nes.control_pad.press(ControlPad::Button::Up)
-      when LibSDL::Key::DOWN
-        nes.control_pad.press(ControlPad::Button::Down)
-      when LibSDL::Key::LEFT
-        nes.control_pad.press(ControlPad::Button::Left)
-      when LibSDL::Key::RIGHT
-        nes.control_pad.press(ControlPad::Button::Right)
-      when LibSDL::Key::O
-        nes.control_pad.press(ControlPad::Button::Start)
-      when LibSDL::Key::P
-        nes.control_pad.press(ControlPad::Button::Select)
-      end
-    when LibSDL::KEYUP
-      case event.key.key_sym.sym
-      when LibSDL::Key::Z
-        nes.control_pad.release(ControlPad::Button::A)
-      when LibSDL::Key::X
-        nes.control_pad.release(ControlPad::Button::B)
-      when LibSDL::Key::UP
-        nes.control_pad.release(ControlPad::Button::Up)
-      when LibSDL::Key::DOWN
-        nes.control_pad.release(ControlPad::Button::Down)
-      when LibSDL::Key::LEFT
-        nes.control_pad.release(ControlPad::Button::Left)
-      when LibSDL::Key::RIGHT
-        nes.control_pad.release(ControlPad::Button::Right)
-      when LibSDL::Key::O
-        nes.control_pad.release(ControlPad::Button::Start)
-      when LibSDL::Key::P
-        nes.control_pad.release(ControlPad::Button::Select)
+  count += 1
+
+  if count % 100 == 0
+    SDL.poll_events do |event|
+      case event.type
+      when LibSDL::QUIT
+        SDL.quit
+        exit
+      when LibSDL::KEYDOWN
+        case event.key.key_sym.sym
+        when LibSDL::Key::Z
+          nes.control_pad.press(ControlPad::Button::A)
+        when LibSDL::Key::X
+          nes.control_pad.press(ControlPad::Button::B)
+        when LibSDL::Key::UP
+          nes.control_pad.press(ControlPad::Button::Up)
+        when LibSDL::Key::DOWN
+          nes.control_pad.press(ControlPad::Button::Down)
+        when LibSDL::Key::LEFT
+          nes.control_pad.press(ControlPad::Button::Left)
+        when LibSDL::Key::RIGHT
+          nes.control_pad.press(ControlPad::Button::Right)
+        when LibSDL::Key::O
+          nes.control_pad.press(ControlPad::Button::Start)
+        when LibSDL::Key::P
+          nes.control_pad.press(ControlPad::Button::Select)
+        end
+      when LibSDL::KEYUP
+        case event.key.key_sym.sym
+        when LibSDL::Key::Z
+          nes.control_pad.release(ControlPad::Button::A)
+        when LibSDL::Key::X
+          nes.control_pad.release(ControlPad::Button::B)
+        when LibSDL::Key::UP
+          nes.control_pad.release(ControlPad::Button::Up)
+        when LibSDL::Key::DOWN
+          nes.control_pad.release(ControlPad::Button::Down)
+        when LibSDL::Key::LEFT
+          nes.control_pad.release(ControlPad::Button::Left)
+        when LibSDL::Key::RIGHT
+          nes.control_pad.release(ControlPad::Button::Right)
+        when LibSDL::Key::O
+          nes.control_pad.release(ControlPad::Button::Start)
+        when LibSDL::Key::P
+          nes.control_pad.release(ControlPad::Button::Select)
+        end
       end
     end
   end
