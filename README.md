@@ -20,6 +20,11 @@ make
 * O: Start
 * P: Select
 
+## TODO
+
+* Audio (implement Nes APU)
+* More mappers (currently NROM and UNROM are supported)
+
 ## Issues
 
-Runs too fast right now, needs frame limit.
+Some graphical issues (vblank handling in PPU?)
