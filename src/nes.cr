@@ -29,6 +29,17 @@ class Nes
     d_cycles
   end
 
+  def step(millis)
+    cycles = 0
+    cycles_needed = Cpu::Frequency * millis / 1000
+    while cycles_needed > 0
+      cycles_step = step
+      cycles_needed -=  cycles_step
+      cycles += cycles_step
+    end
+    cycles
+  end
+
   private def build_mapper
     case @rom.mapper_number
     when 0; Nrom.new(@rom)
