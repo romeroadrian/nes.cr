@@ -5,7 +5,7 @@ class PpuMemory
     @vram = VRam.new
   end
 
-  def read(address: UInt16)
+  def read(address : UInt16)
     address = address % 0x4000
     case
     when address < 0x2000 # Pattern tables
@@ -20,7 +20,7 @@ class PpuMemory
     end
   end
 
-  def write(address: UInt16, value: UInt8)
+  def write(address : UInt16, value : UInt8)
     address = address % 0x4000
     case
     when address < 0x2000 # Pattern tables

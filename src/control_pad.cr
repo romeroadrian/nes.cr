@@ -19,15 +19,15 @@ class ControlPad
     @reset = false
   end
 
-  def press(which: Button)
+  def press(which : Button)
     @pressed[which.value] = true
   end
 
-  def release(which: Button)
+  def release(which : Button)
     @pressed[which.value] = false
   end
 
-  def set(which: Button, pressed: Bool)
+  def set(which : Button, pressed : Bool)
     @pressed[which.value] = pressed
   end
 
@@ -38,7 +38,7 @@ class ControlPad
     value
   end
 
-  def write(value: UInt8)
+  def write(value : UInt8)
     @reset = value % 2 == 1
     try_reset
   end
