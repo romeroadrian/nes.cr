@@ -1,5 +1,17 @@
 # nes.cr
 
+## Prerequisites
+
+* libSDL
+
+### Installation on OSX
+
+You can install libSDL via homebrew:
+
+```
+brew install sdl
+```
+
 ## Compile
 
 ```
