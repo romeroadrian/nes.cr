@@ -1,5 +1,7 @@
 # nes.cr
 
+<img src="https://cloud.githubusercontent.com/assets/1090631/11979320/2cd2f75c-a971-11e5-8170-1b2f0fad207c.png" width="250">
+
 ## Prerequisites
 
 * libSDL
