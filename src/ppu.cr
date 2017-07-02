@@ -3,24 +3,24 @@ require "./color"
 
 class Ppu
 
-  @control :: UInt8
-  @mask :: UInt8
-  @oam_address :: UInt8
-  @vram_address :: UInt16
-  @temp_vram_address :: UInt16
-  @address_latch :: Bool
-  @scroll_x :: UInt8
-  @last_register :: UInt8
-  @name_table_data :: UInt8
-  @attr_table_data :: UInt8
-  @tile_low_data :: UInt8
-  @tile_high_data :: UInt8
-  @tile_data_store :: UInt32
-  @attr_data_store :: UInt16
-  @buffer_vram :: UInt8
+  @control : UInt8
+  @mask : UInt8
+  @oam_address : UInt8
+  @vram_address : UInt16
+  @temp_vram_address : UInt16
+  @address_latch : Bool
+  @scroll_x : UInt8
+  @last_register : UInt8
+  @name_table_data : UInt8
+  @attr_table_data : UInt8
+  @tile_low_data : UInt8
+  @tile_high_data : UInt8
+  @tile_data_store : UInt32
+  @attr_data_store : UInt16
+  @buffer_vram : UInt8
 
   getter shown
-  setter cpu
+  setter cpu : Cpu?
 
   private getter! memory
   private getter! cpu
@@ -41,15 +41,15 @@ class Ppu
     @tile_data_store = 0_u32
     @attr_data_store = 0_u16
 
-    @oam = Array.new(256, 0_u8)
-    @secondary_oam = Array.new(32, 0_u8)
-    @sprite_tile_data = Array.new(8, 0_u16)
-    @sprite_attr_data = Array.new(8, 0_u8)
-    @sprite_x_data = Array.new(8, 0_u8)
+    @oam = Array(UInt8).new(256, 0_u8)
+    @secondary_oam = Array(UInt8).new(32, 0_u8)
+    @sprite_tile_data = Array(UInt16).new(8, 0_u16)
+    @sprite_attr_data = Array(UInt8).new(8, 0_u8)
+    @sprite_x_data = Array(UInt8).new(8, 0_u8)
     @sprite_count = 0
     @current_sprite_index = 0
 
-    @palette = Array.new(32, 0_u8)
+    @palette = Array(UInt8).new(32, 0_u8)
 
     @cycle = 0
     @scan_line = 241

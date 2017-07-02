@@ -1,2 +1,4 @@
-.crystal
+/.crystal
+/.shards
+/lib
 /roms

@@ -4,9 +4,13 @@ require "./cpu_memory"
 require "./ppu"
 require "./ppu_memory"
 require "./control_pad"
+require "./mapper"
 require "./mappers/*"
 
 class Nes
+  @rom : Rom
+  @mapper : Mapper
+
   getter rom
   getter ppu
   getter control_pad

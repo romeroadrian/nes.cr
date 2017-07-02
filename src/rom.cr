@@ -4,12 +4,17 @@ class Rom
   PRG_ROM_SIZE = 16384
   CHR_ROM_SIZE = 8192
 
+  @prg_banks : UInt8
+  @chr_banks : UInt8
+  @mirror_mode : Symbol
+  @chr_ram :  Array(UInt8)?
+
   getter prg_banks
   getter chr_banks
   getter mirror_mode
   private getter! chr_ram
 
-  def initialize(@data)
+  def initialize(@data : Array(UInt8))
     @prg_banks = @data[4]
     @chr_banks = @data[5]
     @mirror_mode = read_mirror_mode

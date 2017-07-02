@@ -14,7 +14,7 @@ class ControlPad
   end
 
   def initialize
-    @pressed = Array.new(8, false)
+    @pressed = Array(Bool).new(8, false)
     @index = 0
     @reset = false
   end

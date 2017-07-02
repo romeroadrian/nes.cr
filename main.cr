@@ -1,7 +1,7 @@
 require "./src/nes"
 require "crsfml"
 
-if ARGV.length > 0
+if ARGV.size > 0
   nes = Nes.new ARGV[0]
 
   p "Valid header: #{nes.rom.valid_header?}"
@@ -13,7 +13,9 @@ if ARGV.length > 0
 
   p "Mapper number: #{nes.rom.mapper_number}"
 
-  nes.run
+  while true
+    nes.step
+  end
 
   # window = SF::RenderWindow.new(SF.video_mode(800, 600), "NES")
 end

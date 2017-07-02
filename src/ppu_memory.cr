@@ -1,7 +1,7 @@
 require "./v_ram"
 
 class PpuMemory
-  def initialize(@rom, @ppu)
+  def initialize(@rom : Rom, @ppu : Ppu)
     @vram = VRam.new
   end
 

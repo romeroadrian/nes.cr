@@ -1,5 +1,5 @@
-class Nrom
-  def initialize(@rom)
+class Nrom < Mapper
+  def initialize(@rom : Rom)
   end
 
   def read_prg(address)

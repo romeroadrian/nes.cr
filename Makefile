@@ -2,4 +2,4 @@
 all: main_sdl
 
 main_sdl:
-	crystal build main_sdl.cr -o nes --release
+	crystal build main_sfml.cr -o nes --release

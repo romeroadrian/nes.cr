@@ -1,5 +1,8 @@
-class Unrom
-  def initialize(@rom)
+class Unrom < Mapper
+  @low_bank : UInt32
+  @high_bank : UInt32
+
+  def initialize(@rom : Rom)
     @low_bank = 0_u32
     @high_bank = (@rom.prg_banks - 1).to_u32
   end

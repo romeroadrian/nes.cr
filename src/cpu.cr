@@ -6,25 +6,27 @@ class Cpu
 
   Frequency = 1789773
 
-  @a  :: UInt8
-  @x  :: UInt8
-  @y  :: UInt8
-  @sp :: UInt8
-  @pc :: UInt16
+  @a  : UInt8
+  @x  : UInt8
+  @y  : UInt8
+  @sp : UInt8
+  @pc : UInt16
 
-  @c  :: UInt8
-  @z  :: UInt8
-  @i  :: UInt8
-  @d  :: UInt8
-  @b  :: UInt8
-  @v  :: UInt8
-  @n  :: UInt8
+  @c  : UInt8
+  @z  : UInt8
+  @i  : UInt8
+  @d  : UInt8
+  @b  : UInt8
+  @v  : UInt8
+  @n  : UInt8
 
-  @cycles :: UInt64
+  @cycles : UInt64
+
+  @requested_interrupt : Symbol?
 
   getter cycles
 
-  def initialize(@memory)
+  def initialize(@memory : CpuMemory)
     # CPU Registers
     @a = 0_u8     # accumulator 8bits
     @x = 0_u8     # x index 8bits

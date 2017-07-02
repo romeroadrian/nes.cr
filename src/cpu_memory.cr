@@ -1,6 +1,6 @@
 class CpuMemory
 
-  def initialize(@mapper, @ppu, @control_pad)
+  def initialize(@mapper : Mapper, @ppu : Ppu, @control_pad : ControlPad)
     @cpu_ram = CpuRam.new
   end
 

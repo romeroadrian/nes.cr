@@ -1,0 +1,6 @@
+version: 1.0
+shards:
+  crsfml:
+    github: oprypin/crsfml
+    version: 2.4.5
+
