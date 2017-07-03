@@ -1,7 +1,7 @@
 require "./v_ram"
 
 class PpuMemory
-  def initialize(@rom : Rom, @ppu : Ppu)
+  def initialize(@rom : Rom, @ppu : Ppu, @mapper : Mapper)
     @vram = VRam.new
   end
 
@@ -9,7 +9,7 @@ class PpuMemory
     address = address % 0x4000
     case
     when address < 0x2000 # Pattern tables
-      @rom.read_chr(address)
+      @mapper.read(address)
     when address < 0x3F00 # Name/Attribute tables
       @vram.peek mirror_name_table(address)
     when address < 0x4000 # Image/Sprite palettes
@@ -24,7 +24,7 @@ class PpuMemory
     address = address % 0x4000
     case
     when address < 0x2000 # Pattern tables
-      @rom.write_chr(address, value)
+      @mapper.write(address, value)
     when address < 0x3F00 # Name/Attribute tables
       @vram.poke mirror_name_table(address), value
     when address < 0x4000 # Image/Sprite palettes

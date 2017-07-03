@@ -19,7 +19,7 @@ class Nes
     @rom = Rom.from_file path
     @mapper = build_mapper
     @control_pad = ControlPad.new
-    @ppu = Ppu.new @rom
+    @ppu = Ppu.new @rom, @mapper
     @cpu_memory = CpuMemory.new @mapper, @ppu, @control_pad
     @cpu = Cpu.new @cpu_memory
     @ppu.cpu = @cpu
@@ -48,6 +48,7 @@ class Nes
     case @rom.mapper_number
     when 0; Nrom.new(@rom)
     when 2; Unrom.new(@rom)
+    when 3; Cnrom.new(@rom)
     else
       raise "Error: unsupported mapper #{@rom.mapper_number}"
     end

@@ -12,8 +12,8 @@ class CpuMemory
       @ppu.read_register((address - 0x2000) % 8)
     when address == 0x4016
       @control_pad.read
-    when address >= 0x8000
-      @mapper.read_prg(address - 0x8000)
+    when address >= 0x6000
+      @mapper.read(address)
     else
       0_u8
       # raise "Can't read memory address: 0x#{address.to_s(16)}"
@@ -44,8 +44,8 @@ class CpuMemory
       @ppu.dma_address = value
     when address == 0x4016
       @control_pad.write value
-    when address >= 0x8000
-      @mapper.write_prg(address - 0x8000, value)
+    when address >= 0x6000
+      @mapper.write(address, value)
     # else
       # raise "Can't write memory address: 0x#{address.to_s(16)}"
     end

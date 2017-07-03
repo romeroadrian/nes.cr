@@ -25,7 +25,7 @@ class Ppu
   private getter! memory
   private getter! cpu
 
-  def initialize(rom)
+  def initialize(rom, mapper)
     @control = 0_u8
     @mask = 0_u8
     @last_register = 0_u8
@@ -67,7 +67,7 @@ class Ppu
     @tile_low_data = 0_u8
     @tile_high_data = 0_u8
 
-    @memory = PpuMemory.new rom, self
+    @memory = PpuMemory.new rom, self, mapper
   end
 
   def read_register(number)

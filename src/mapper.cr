@@ -1,4 +1,4 @@
 abstract class Mapper
-  abstract def read_prg(address)
-  abstract def write_prg(address, value)
+  abstract def read(address)
+  abstract def write(address, value)
 end
